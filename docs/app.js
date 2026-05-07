@@ -183,21 +183,58 @@ const PROMPT_TEMPLATES = [
   },
 ];
 
-// ─── Settings helpers ─────────────────────────────────────────────
+// ─── Provider & Model Config ──────────────────────────────────────
+
+const PROVIDERS = {
+  gemini: {
+    name: "Google Gemini",
+    defaultBaseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    defaultModel: "gemini-2.5-flash",
+    keyPlaceholder: "AIza… or AQ.…",
+    models: [
+      { id: "gemini-2.5-flash",      label: "Gemini 2.5 Flash (default)",  rpm: 5,  rpd: 20  },
+      { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite",       rpm: 10, rpd: 20  },
+      { id: "gemini-3-flash",        label: "Gemini 3 Flash",              rpm: 5,  rpd: 20  },
+      { id: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite",       rpm: 15, rpd: 500 },
+    ],
+  },
+  openai: {
+    name: "OpenAI",
+    defaultBaseUrl: "https://api.openai.com",
+    defaultModel: "gpt-4o-mini",
+    keyPlaceholder: "sk-…",
+    models: [
+      { id: "gpt-4o-mini", label: "GPT-4o mini (cheapest)" },
+      { id: "gpt-4o",      label: "GPT-4o"                 },
+      { id: "gpt-4-turbo", label: "GPT-4 Turbo"            },
+      { id: "o1-mini",     label: "o1-mini (reasoning)"     },
+    ],
+  },
+};
+
+// ─── Session State ────────────────────────────────────────────────
 
 const SESSION = {
+  provider: "gemini",
   apiKey: "",
   model: "",
   baseUrl: "",
 };
 
+// ─── Settings persistence ─────────────────────────────────────────
+
 function loadSettings() {
-  SESSION.apiKey = sessionStorage.getItem("aiboost_key") || "";
-  SESSION.model   = localStorage.getItem("aiboost_model")    || "";
-  SESSION.baseUrl = localStorage.getItem("aiboost_base_url") || "";
+  SESSION.provider = localStorage.getItem("aiboost_provider") || "gemini";
+  SESSION.apiKey   = sessionStorage.getItem("aiboost_key")    || "";
+  SESSION.model    = localStorage.getItem("aiboost_model")    || "";
+  SESSION.baseUrl  = localStorage.getItem("aiboost_base_url") || "";
 }
 
-function saveSettings({ key, model, baseUrl }) {
+function saveSettings({ provider, key, model, baseUrl }) {
+  if (provider !== undefined) {
+    SESSION.provider = provider;
+    localStorage.setItem("aiboost_provider", provider);
+  }
   if (key !== undefined) {
     SESSION.apiKey = key;
     if (key) {
@@ -226,6 +263,14 @@ function saveSettings({ key, model, baseUrl }) {
 
 function hasApiKey() {
   return SESSION.apiKey.length > 0;
+}
+
+function activeProvider() {
+  return PROVIDERS[SESSION.provider] || PROVIDERS.gemini;
+}
+
+function activeModel() {
+  return SESSION.model || activeProvider().defaultModel;
 }
 
 // ─── Tab Navigation ───────────────────────────────────────────────
@@ -264,7 +309,7 @@ plannerForm.addEventListener("submit", async e => {
 
   try {
     const plan = hasApiKey()
-      ? await generatePlanFromOpenAI(topic)
+      ? await generatePlan(topic)
       : buildDemoPlan(topic);
     renderPlan(plan);
   } catch (err) {
@@ -275,11 +320,12 @@ plannerForm.addEventListener("submit", async e => {
   }
 });
 
-// ─── OpenAI API Call ──────────────────────────────────────────────
+// ─── AI API Call (OpenAI-compatible endpoint for both providers) ───
 
-async function generatePlanFromOpenAI(topic) {
-  const baseUrl = SESSION.baseUrl || "https://api.openai.com";
-  const model   = SESSION.model   || "gpt-4o-mini";
+async function generatePlan(topic) {
+  const prov    = activeProvider();
+  const baseUrl = SESSION.baseUrl || prov.defaultBaseUrl;
+  const model   = activeModel();
   const url     = baseUrl.replace(/\/$/, "") + "/v1/chat/completions";
 
   const systemPrompt = `You are an expert educator and curriculum designer.
@@ -333,7 +379,10 @@ Phases should cover: Foundations → Core Skills → Projects → Mastery.`;
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `OpenAI API error (${res.status}). Check your API key in ⚙️ API Key.`);
+    throw new Error(
+      err?.error?.message ||
+      `${prov.name} API error (${res.status}). Check your API key in ⚙️ API Key.`
+    );
   }
 
   const data = await res.json();
@@ -432,7 +481,7 @@ function renderPlan(plan) {
 
   if (plan._demo) {
     html += `<div class="demo-notice">
-      ⚠️ <strong>Demo mode</strong> — add your OpenAI API key in <strong>⚙️ API Key</strong> to get an AI-generated plan tailored to "${escHtml(plan.topic)}".
+      ⚠️ <strong>Demo mode</strong> — add your API key in <strong>⚙️ API Key</strong> to get an AI-generated plan tailored to "${escHtml(plan.topic)}".
     </div>`;
   }
 
@@ -549,56 +598,120 @@ function renderPrompts() {
 
 function initSettings() {
   const keyInput     = document.getElementById("api-key-input");
-  const modelInput   = document.getElementById("model-input");
+  const modelSelect  = document.getElementById("model-select");
   const baseUrlInput = document.getElementById("base-url-input");
   const keyStatus    = document.getElementById("key-status");
 
-  // Pre-fill from loaded settings
-  keyInput.value     = SESSION.apiKey;
-  modelInput.value   = SESSION.model;
-  baseUrlInput.value = SESSION.baseUrl;
+  // ── Provider buttons ──
+  document.querySelectorAll(".provider-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".provider-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      saveSettings({ provider: btn.dataset.provider });
+      refreshProviderUI();
+      updateModeHint();
+    });
+  });
 
+  // ── Save key ──
   document.getElementById("save-key-btn").addEventListener("click", () => {
     const key = keyInput.value.trim();
     saveSettings({ key });
     updateModeHint();
-    keyStatus.textContent = key ? "✅ API key saved for this session (cleared when tab closes)." : "✅ Key cleared.";
-    keyStatus.className   = "key-status ok";
+    keyStatus.textContent = key
+      ? "✅ API key saved for this session (cleared when tab closes)."
+      : "✅ Key cleared.";
+    keyStatus.className = "key-status ok";
     keyStatus.classList.remove("hidden");
     setTimeout(() => keyStatus.classList.add("hidden"), 3000);
     showToast("✅ API key saved!");
   });
 
+  // ── Clear key ──
   document.getElementById("clear-key-btn").addEventListener("click", () => {
     keyInput.value = "";
     saveSettings({ key: "" });
     updateModeHint();
     keyStatus.textContent = "🗑 API key cleared.";
-    keyStatus.className   = "key-status cleared";
+    keyStatus.className = "key-status cleared";
     keyStatus.classList.remove("hidden");
     setTimeout(() => keyStatus.classList.add("hidden"), 3000);
   });
 
+  // ── Save model ──
   document.getElementById("save-model-btn").addEventListener("click", () => {
-    saveSettings({ model: modelInput.value.trim() });
+    saveSettings({ model: modelSelect.value });
+    updateModeHint();
     showToast("✅ Model saved!");
   });
 
+  // ── Save base URL ──
   document.getElementById("save-base-url-btn").addEventListener("click", () => {
     saveSettings({ baseUrl: baseUrlInput.value.trim() });
     showToast("✅ Base URL saved!");
   });
+
+  // ── Initial UI state ──
+  keyInput.value     = SESSION.apiKey;
+  baseUrlInput.value = SESSION.baseUrl;
+  refreshProviderUI();
+}
+
+function refreshProviderUI() {
+  const prov       = activeProvider();
+  const provKey    = SESSION.provider;
+  const modelSelect = document.getElementById("model-select");
+  const keyInput    = document.getElementById("api-key-input");
+  const rateLimits  = document.getElementById("model-rate-limits");
+
+  // Highlight active provider button
+  document.querySelectorAll(".provider-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.provider === provKey);
+  });
+
+  // Show/hide key description
+  document.getElementById("key-desc-gemini").classList.toggle("hidden", provKey !== "gemini");
+  document.getElementById("key-desc-openai").classList.toggle("hidden", provKey !== "openai");
+
+  // Update key placeholder
+  keyInput.placeholder = prov.keyPlaceholder;
+
+  // Rebuild model dropdown
+  modelSelect.innerHTML = prov.models.map(m =>
+    `<option value="${escAttr(m.id)}" ${m.id === activeModel() ? "selected" : ""}>${escHtml(m.label)}</option>`
+  ).join("");
+
+  // Show rate limits table only for Gemini (has free tier limits)
+  if (provKey === "gemini") {
+    const rows = prov.models.map(m => {
+      const isActive = m.id === activeModel();
+      return `<tr class="${isActive ? "active-row" : ""}">
+        <td>${escHtml(m.id)}</td>
+        <td>${m.rpm} req/min</td>
+        <td>${m.rpd} req/day</td>
+      </tr>`;
+    }).join("");
+    rateLimits.innerHTML = `<strong>Free-tier rate limits:</strong>
+      <table style="margin-top:0.5rem;">
+        <tr><th>Model</th><th>RPM</th><th>RPD</th></tr>
+        ${rows}
+      </table>`;
+    rateLimits.classList.remove("hidden");
+  } else {
+    rateLimits.classList.add("hidden");
+  }
 }
 
 function updateModeHint() {
   const hint   = document.getElementById("mode-hint");
   const banner = document.getElementById("api-key-banner");
   if (hasApiKey()) {
-    const m = SESSION.model || "gpt-4o-mini";
-    hint.innerHTML = `🤖 <strong>AI mode</strong> — using OpenAI model <code>${escHtml(m)}</code>. Plans are generated by AI.`;
+    const prov  = activeProvider();
+    const model = activeModel();
+    hint.innerHTML = `${prov.name === "Google Gemini" ? "✨" : "🤖"} <strong>AI mode</strong> — ${escHtml(prov.name)} / <code>${escHtml(model)}</code>. Plans are generated by AI.`;
     banner.classList.add("hidden");
   } else {
-    hint.innerHTML = `✅ <strong>Demo mode</strong> — add your OpenAI API key in ⚙️ API Key tab for AI-generated plans.`;
+    hint.innerHTML = `✅ <strong>Demo mode</strong> — add your API key in ⚙️ API Key tab for AI-generated plans.`;
     banner.classList.remove("hidden");
   }
 }

@@ -93,26 +93,41 @@
     <!-- ─── TAB: SETTINGS ─── -->
     <section id="tab-settings" class="tab-panel hidden">
       <div class="hero">
-        <h1>API Key Settings</h1>
-        <p class="hero-sub">Your API key is stored only in this browser tab and is never sent anywhere except directly to OpenAI.</p>
+        <h1>API Key &amp; Model Settings</h1>
+        <p class="hero-sub">Your API key is stored only in this browser session and is never committed to any code.</p>
       </div>
 
       <div class="card settings-card">
-        <h2 class="settings-heading">🔑 OpenAI API Key</h2>
-        <p class="settings-desc">
+
+        <!-- ── Provider ── -->
+        <h2 class="settings-heading">🤖 AI Provider</h2>
+        <p class="settings-desc">Choose which AI service to use for generating learning plans.</p>
+        <div class="provider-selector" id="provider-selector" style="margin-top:0.75rem;">
+          <button class="provider-btn active" data-provider="gemini">✨ Google Gemini <span class="provider-badge">Free tier available</span></button>
+          <button class="provider-btn" data-provider="openai">🤖 OpenAI</button>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- ── API Key ── -->
+        <h2 class="settings-heading">🔑 API Key</h2>
+        <p class="settings-desc" id="key-desc-gemini">
+          Get a free Gemini key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.
+          The free tier includes generous daily limits.
+        </p>
+        <p class="settings-desc hidden" id="key-desc-openai">
           Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>.
-          The cheapest model (<code>gpt-4o-mini</code>) costs roughly $0.0001 per plan.
+          <code>gpt-4o-mini</code> costs roughly $0.0001 per plan.
         </p>
         <p class="settings-desc" style="margin-top:0.4rem;">
-          🔒 Your key is stored only in <strong>session storage</strong> and is automatically cleared when you close this tab.
-          It is never sent anywhere except directly to OpenAI.
+          🔒 Stored in <strong>session storage</strong> only — automatically cleared when you close this tab.
         </p>
-        <div class="input-row" style="margin-top:1rem;">
+        <div class="input-row" style="margin-top:0.9rem;">
           <input
             id="api-key-input"
             type="password"
             class="topic-input"
-            placeholder="sk-…"
+            placeholder="Paste your API key…"
             autocomplete="off"
             spellcheck="false"
           />
@@ -123,31 +138,34 @@
 
         <hr class="divider" />
 
-        <h2 class="settings-heading">🤖 Model</h2>
-        <p class="settings-desc">Leave blank to use <code>gpt-4o-mini</code> (recommended for cost).</p>
-        <div class="input-row" style="margin-top:0.8rem;">
-          <input
-            id="model-input"
-            type="text"
-            class="topic-input"
-            placeholder="gpt-4o-mini"
-            style="max-width:320px;"
-          />
+        <!-- ── Model ── -->
+        <h2 class="settings-heading">🎯 Model</h2>
+        <p class="settings-desc" id="model-desc">Select the model to use for generating learning plans.</p>
+        <div class="model-selector-row" style="margin-top:0.75rem;">
+          <select id="model-select" class="model-select"></select>
           <button id="save-model-btn" class="btn-secondary">Save</button>
         </div>
+        <div id="model-rate-limits" class="rate-limits-info hidden"></div>
 
         <hr class="divider" />
 
-        <h2 class="settings-heading">🔗 Custom Base URL <span style="font-size:0.8rem;font-weight:400;color:var(--text-muted)">(optional — for Ollama, LM Studio, etc.)</span></h2>
-        <div class="input-row" style="margin-top:0.8rem;">
-          <input
-            id="base-url-input"
-            type="text"
-            class="topic-input"
-            placeholder="http://localhost:11434/v1"
-          />
-          <button id="save-base-url-btn" class="btn-secondary">Save</button>
-        </div>
+        <!-- ── Custom Base URL (advanced) ── -->
+        <details class="advanced-details">
+          <summary class="settings-heading" style="cursor:pointer; list-style:none; display:flex; align-items:center; gap:0.4rem;">
+            🔗 Custom Base URL <span style="font-size:0.8rem; font-weight:400; color:var(--text-muted)">(advanced — for Ollama, LM Studio, or other providers)</span>
+          </summary>
+          <p class="settings-desc" style="margin-top:0.5rem;">Leave blank to use the default endpoint for the selected provider.</p>
+          <div class="input-row" style="margin-top:0.8rem;">
+            <input
+              id="base-url-input"
+              type="text"
+              class="topic-input"
+              placeholder="e.g. http://localhost:11434/v1"
+            />
+            <button id="save-base-url-btn" class="btn-secondary">Save</button>
+          </div>
+        </details>
+
       </div>
     </section>
 
