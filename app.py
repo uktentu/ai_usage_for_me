@@ -302,7 +302,8 @@ def learning_plan():
     except json.JSONDecodeError:
         return jsonify({"error": "Model returned invalid JSON. Try again."}), 500
     except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
+        app.logger.error("learning-plan error: %s", exc)
+        return jsonify({"error": "An unexpected error occurred. Please try again."}), 500
 
 
 def _demo_plan(topic: str) -> dict:
