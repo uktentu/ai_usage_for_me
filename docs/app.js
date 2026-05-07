@@ -192,28 +192,35 @@ const SESSION = {
 };
 
 function loadSettings() {
-  SESSION.apiKey = sessionStorage.getItem("aiboost_key") || localStorage.getItem("aiboost_key") || "";
+  SESSION.apiKey = sessionStorage.getItem("aiboost_key") || "";
   SESSION.model   = localStorage.getItem("aiboost_model")    || "";
   SESSION.baseUrl = localStorage.getItem("aiboost_base_url") || "";
 }
 
-function saveSettings({ key, model, baseUrl, persist }) {
+function saveSettings({ key, model, baseUrl }) {
   if (key !== undefined) {
     SESSION.apiKey = key;
-    sessionStorage.setItem("aiboost_key", key);
-    if (persist) {
-      localStorage.setItem("aiboost_key", key);
+    if (key) {
+      sessionStorage.setItem("aiboost_key", key);
     } else {
-      localStorage.removeItem("aiboost_key");
+      sessionStorage.removeItem("aiboost_key");
     }
   }
   if (model !== undefined) {
     SESSION.model = model;
-    localStorage.setItem("aiboost_model", model);
+    if (model) {
+      localStorage.setItem("aiboost_model", model);
+    } else {
+      localStorage.removeItem("aiboost_model");
+    }
   }
   if (baseUrl !== undefined) {
     SESSION.baseUrl = baseUrl;
-    localStorage.setItem("aiboost_base_url", baseUrl);
+    if (baseUrl) {
+      localStorage.setItem("aiboost_base_url", baseUrl);
+    } else {
+      localStorage.removeItem("aiboost_base_url");
+    }
   }
 }
 
@@ -544,20 +551,18 @@ function initSettings() {
   const keyInput     = document.getElementById("api-key-input");
   const modelInput   = document.getElementById("model-input");
   const baseUrlInput = document.getElementById("base-url-input");
-  const persistCb    = document.getElementById("persist-key-cb");
   const keyStatus    = document.getElementById("key-status");
 
   // Pre-fill from loaded settings
   keyInput.value     = SESSION.apiKey;
   modelInput.value   = SESSION.model;
   baseUrlInput.value = SESSION.baseUrl;
-  persistCb.checked  = !!localStorage.getItem("aiboost_key");
 
   document.getElementById("save-key-btn").addEventListener("click", () => {
     const key = keyInput.value.trim();
-    saveSettings({ key, persist: persistCb.checked });
+    saveSettings({ key });
     updateModeHint();
-    keyStatus.textContent = key ? "✅ API key saved for this session." : "✅ Key cleared.";
+    keyStatus.textContent = key ? "✅ API key saved for this session (cleared when tab closes)." : "✅ Key cleared.";
     keyStatus.className   = "key-status ok";
     keyStatus.classList.remove("hidden");
     setTimeout(() => keyStatus.classList.add("hidden"), 3000);
@@ -566,9 +571,7 @@ function initSettings() {
 
   document.getElementById("clear-key-btn").addEventListener("click", () => {
     keyInput.value = "";
-    sessionStorage.removeItem("aiboost_key");
-    localStorage.removeItem("aiboost_key");
-    SESSION.apiKey = "";
+    saveSettings({ key: "" });
     updateModeHint();
     keyStatus.textContent = "🗑 API key cleared.";
     keyStatus.className   = "key-status cleared";
@@ -615,7 +618,7 @@ function showToast(msg) {
 // ─── Helpers ──────────────────────────────────────────────────────
 
 function escHtml(str) {
-  if (!str && str !== 0) return "";
+  if (!str) return "";
   return String(str)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

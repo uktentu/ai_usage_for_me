@@ -207,7 +207,7 @@ PROMPT_TEMPLATES = [
             },
             {
                 "title": "First Principles",
-                "prompt": "Break down [TOPIC] using first principles thinking. What are the fundamental truths, and how do everything else build from them?",
+                "prompt": "Break down [TOPIC] using first principles thinking. What are the fundamental truths, and how does everything else build from them?",
             },
             {
                 "title": "Action Plan",

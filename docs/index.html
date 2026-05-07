@@ -103,6 +103,10 @@
           Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>.
           The cheapest model (<code>gpt-4o-mini</code>) costs roughly $0.0001 per plan.
         </p>
+        <p class="settings-desc" style="margin-top:0.4rem;">
+          🔒 Your key is stored only in <strong>session storage</strong> and is automatically cleared when you close this tab.
+          It is never sent anywhere except directly to OpenAI.
+        </p>
         <div class="input-row" style="margin-top:1rem;">
           <input
             id="api-key-input"
@@ -115,10 +119,6 @@
           <button id="save-key-btn" class="btn-primary">Save Key</button>
           <button id="clear-key-btn" class="btn-secondary">Clear</button>
         </div>
-        <label class="checkbox-label" style="margin-top:0.8rem;">
-          <input type="checkbox" id="persist-key-cb" />
-          Remember key in localStorage (convenient but less secure)
-        </label>
         <div id="key-status" class="key-status hidden"></div>
 
         <hr class="divider" />
