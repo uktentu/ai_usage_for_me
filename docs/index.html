@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIBoost — AI Usage & Learning Planner</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ===== HEADER ===== -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">🧠</span>
+        <span class="logo-text">AI<span class="accent">Boost</span></span>
+      </div>
+      <nav class="main-nav">
+        <button class="nav-btn active" data-tab="planner">📚 Learning Planner</button>
+        <button class="nav-btn" data-tab="llm-guide">🤖 LLM Guide</button>
+        <button class="nav-btn" data-tab="prompts">✨ Prompt Library</button>
+        <button class="nav-btn" data-tab="settings">⚙️ API Key</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="main-content">
+
+    <!-- ─── API KEY BANNER (shown when no key is set) ─── -->
+    <div id="api-key-banner" class="api-key-banner hidden">
+      <span>⚡ <strong>Add your OpenAI API key</strong> to get AI-generated learning plans — or use Demo Mode for free.</span>
+      <button class="btn-link" id="banner-settings-btn">Set API Key →</button>
+    </div>
+
+    <!-- ─── TAB: LEARNING PLANNER ─── -->
+    <section id="tab-planner" class="tab-panel active">
+      <div class="hero">
+        <h1>Pareto Learning Planner</h1>
+        <p class="hero-sub">Enter any technology or topic and get a focused, 80/20 learning roadmap instantly.</p>
+      </div>
+
+      <div class="planner-card card">
+        <form id="planner-form">
+          <label for="topic-input" class="form-label">What do you want to learn?</label>
+          <div class="input-row">
+            <input
+              id="topic-input"
+              type="text"
+              class="topic-input"
+              placeholder="e.g. React, Machine Learning, Docker, SQL, TypeScript…"
+              autocomplete="off"
+              required
+            />
+            <button type="submit" class="btn-primary" id="generate-btn">
+              <span class="btn-icon">⚡</span> Generate Plan
+            </button>
+          </div>
+          <p class="hint" id="mode-hint">✅ <strong>Demo mode</strong> — add your OpenAI API key in ⚙️ API Key tab for AI-generated plans.</p>
+        </form>
+      </div>
+
+      <!-- Loading state -->
+      <div id="planner-loading" class="loading-state hidden">
+        <div class="spinner"></div>
+        <p>Crafting your Pareto learning plan…</p>
+      </div>
+
+      <!-- Error state -->
+      <div id="planner-error" class="error-banner hidden"></div>
+
+      <!-- Result -->
+      <div id="planner-result" class="hidden"></div>
+    </section>
+
+    <!-- ─── TAB: LLM GUIDE ─── -->
+    <section id="tab-llm-guide" class="tab-panel hidden">
+      <div class="hero">
+        <h1>LLM Usage Guide</h1>
+        <p class="hero-sub">Master every major AI model — know their strengths, ideal prompting patterns, and what to avoid.</p>
+      </div>
+      <div id="llm-grid" class="llm-grid"></div>
+    </section>
+
+    <!-- ─── TAB: PROMPT LIBRARY ─── -->
+    <section id="tab-prompts" class="tab-panel hidden">
+      <div class="hero">
+        <h1>Prompt Library</h1>
+        <p class="hero-sub">Ready-to-use prompt templates. Click any card to copy it to your clipboard.</p>
+      </div>
+      <div id="prompts-grid" class="prompts-grid"></div>
+    </section>
+
+    <!-- ─── TAB: SETTINGS ─── -->
+    <section id="tab-settings" class="tab-panel hidden">
+      <div class="hero">
+        <h1>API Key Settings</h1>
+        <p class="hero-sub">Your API key is stored only in this browser tab and is never sent anywhere except directly to OpenAI.</p>
+      </div>
+
+      <div class="card settings-card">
+        <h2 class="settings-heading">🔑 OpenAI API Key</h2>
+        <p class="settings-desc">
+          Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>.
+          The cheapest model (<code>gpt-4o-mini</code>) costs roughly $0.0001 per plan.
+        </p>
+        <div class="input-row" style="margin-top:1rem;">
+          <input
+            id="api-key-input"
+            type="password"
+            class="topic-input"
+            placeholder="sk-…"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="save-key-btn" class="btn-primary">Save Key</button>
+          <button id="clear-key-btn" class="btn-secondary">Clear</button>
+        </div>
+        <label class="checkbox-label" style="margin-top:0.8rem;">
+          <input type="checkbox" id="persist-key-cb" />
+          Remember key in localStorage (convenient but less secure)
+        </label>
+        <div id="key-status" class="key-status hidden"></div>
+
+        <hr class="divider" />
+
+        <h2 class="settings-heading">🤖 Model</h2>
+        <p class="settings-desc">Leave blank to use <code>gpt-4o-mini</code> (recommended for cost).</p>
+        <div class="input-row" style="margin-top:0.8rem;">
+          <input
+            id="model-input"
+            type="text"
+            class="topic-input"
+            placeholder="gpt-4o-mini"
+            style="max-width:320px;"
+          />
+          <button id="save-model-btn" class="btn-secondary">Save</button>
+        </div>
+
+        <hr class="divider" />
+
+        <h2 class="settings-heading">🔗 Custom Base URL <span style="font-size:0.8rem;font-weight:400;color:var(--text-muted)">(optional — for Ollama, LM Studio, etc.)</span></h2>
+        <div class="input-row" style="margin-top:0.8rem;">
+          <input
+            id="base-url-input"
+            type="text"
+            class="topic-input"
+            placeholder="http://localhost:11434/v1"
+          />
+          <button id="save-base-url-btn" class="btn-secondary">Save</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="site-footer">
+    <p>🧠 AIBoost — Learn smarter with the Pareto principle &amp; the right AI tools &nbsp;·&nbsp; <a href="https://github.com/uktentu/ai_usage_for_me" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
