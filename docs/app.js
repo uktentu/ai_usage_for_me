@@ -225,7 +225,7 @@ const SESSION = {
 
 function loadSettings() {
   SESSION.provider = localStorage.getItem("aiboost_provider") || "gemini";
-  SESSION.apiKey   = sessionStorage.getItem("aiboost_key")    || "";
+  SESSION.apiKey   = "";
   SESSION.model    = localStorage.getItem("aiboost_model")    || "";
   SESSION.baseUrl  = localStorage.getItem("aiboost_base_url") || "";
 }
@@ -237,11 +237,6 @@ function saveSettings({ provider, key, model, baseUrl }) {
   }
   if (key !== undefined) {
     SESSION.apiKey = key;
-    if (key) {
-      sessionStorage.setItem("aiboost_key", key);
-    } else {
-      sessionStorage.removeItem("aiboost_key");
-    }
   }
   if (model !== undefined) {
     SESSION.model = model;
@@ -320,7 +315,18 @@ plannerForm.addEventListener("submit", async e => {
   }
 });
 
-// ─── AI API Call (OpenAI-compatible endpoint for both providers) ───
+// ─── AI API Call (direct browser → provider API, OpenAI-compatible) ───
+
+function buildChatCompletionsUrl(baseUrl) {
+  const normalized = (baseUrl || "").trim().replace(/\/+$/, "");
+  if (!normalized) {
+    throw new Error("Provider endpoint is empty. Set a valid Base URL in ⚙️ API Key.");
+  }
+  if (normalized.endsWith("/chat/completions")) {
+    return normalized;
+  }
+  return `${normalized}/chat/completions`;
+}
 
 async function generatePlan(topic) {
   const prov    = activeProvider();
@@ -355,14 +361,6 @@ Return a JSON object with exactly these keys:
   "common_pitfalls": [string] (top 5 mistakes learners make),
   "success_metrics": [string] (how to know you have mastered it),
   "next_steps": [string] (what to learn after mastery)
-}
-
-function buildChatCompletionsUrl(baseUrl) {
-  const normalized = (baseUrl || "").trim().replace(/\/+$/, "");
-  if (normalized.endsWith("/chat/completions")) {
-    return normalized;
-  }
-  return `${normalized}/chat/completions`;
 }
 
 Make the plan practical, specific, and actionable.
@@ -627,7 +625,7 @@ function initSettings() {
     saveSettings({ key });
     updateModeHint();
     keyStatus.textContent = key
-      ? "✅ API key saved for this session (cleared when tab closes)."
+      ? "✅ API key saved in memory for this page session."
       : "✅ Key cleared.";
     keyStatus.className = "key-status ok";
     keyStatus.classList.remove("hidden");

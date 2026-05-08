@@ -34,6 +34,8 @@ PROVIDERS = {
 def _normalize_provider(value: str | None) -> str:
     provider = (value or "").strip().lower()
     if provider not in PROVIDERS:
+        if provider:
+            app.logger.warning("Unsupported provider '%s'; falling back to openai", provider)
         return "openai"
     return provider
 
