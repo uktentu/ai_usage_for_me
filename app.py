@@ -21,6 +21,7 @@ CORS(app)
 # ---------------------------------------------------------------------------
 PROVIDERS = {
     "gemini": {
+        # Gemini OpenAI-compatible endpoint
         "default_base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
         "default_model": "gemini-2.5-flash",
     },

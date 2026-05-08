@@ -188,6 +188,7 @@ const PROMPT_TEMPLATES = [
 const PROVIDERS = {
   gemini: {
     name: "Google Gemini",
+    // Gemini OpenAI-compatible endpoint
     defaultBaseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
     defaultModel: "gemini-2.5-flash",
     keyPlaceholder: "AIza… or AQ.…",
