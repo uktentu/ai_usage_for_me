@@ -17,24 +17,32 @@ app = Flask(__name__, static_folder="static", static_url_path="")
 CORS(app)
 
 # ---------------------------------------------------------------------------
-# OpenAI client (works with any OpenAI-compatible endpoint)
+# Provider configuration
 # ---------------------------------------------------------------------------
-
-_openai_client: OpenAI | None = None
-
-
-def get_client() -> OpenAI:
-    global _openai_client
-    if _openai_client is None:
-        kwargs: dict = {"api_key": os.getenv("OPENAI_API_KEY", "")}
-        base_url = os.getenv("OPENAI_BASE_URL")
-        if base_url:
-            kwargs["base_url"] = base_url
-        _openai_client = OpenAI(**kwargs)
-    return _openai_client
+PROVIDERS = {
+    "gemini": {
+        "default_base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "default_model": "gemini-2.5-flash",
+    },
+    "openai": {
+        "default_base_url": "https://api.openai.com/v1",
+        "default_model": "gpt-4o-mini",
+    },
+}
 
 
-MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+def _normalize_provider(value: str | None) -> str:
+    provider = (value or "").strip().lower()
+    if provider not in PROVIDERS:
+        return "openai"
+    return provider
+
+
+def _build_client(api_key: str, base_url: str | None = None) -> OpenAI:
+    kwargs: dict = {"api_key": api_key}
+    if base_url:
+        kwargs["base_url"] = base_url.rstrip("/")
+    return OpenAI(**kwargs)
 
 # ---------------------------------------------------------------------------
 # Static LLM guide data (no API key required)
@@ -244,7 +252,21 @@ def learning_plan():
     if not topic:
         return jsonify({"error": "topic is required"}), 400
 
-    api_key = os.getenv("OPENAI_API_KEY", "")
+    provider_key = _normalize_provider(data.get("provider"))
+    provider = PROVIDERS[provider_key]
+
+    env_api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    env_base_url = (os.getenv("OPENAI_BASE_URL") or "").strip()
+    env_model = (os.getenv("OPENAI_MODEL") or "").strip()
+
+    req_api_key = (data.get("apiKey") or data.get("api_key") or "").strip()
+    req_model = (data.get("model") or "").strip()
+    req_base_url = (data.get("baseUrl") or data.get("base_url") or "").strip()
+
+    api_key = req_api_key or env_api_key
+    model = req_model or env_model or provider["default_model"]
+    base_url = req_base_url or env_base_url or provider["default_base_url"]
+
     if not api_key or api_key.startswith("sk-your"):
         # Return a helpful demo plan so the app works without an API key
         return jsonify(_demo_plan(topic))
@@ -286,9 +308,9 @@ def learning_plan():
     """).strip()
 
     try:
-        client = get_client()
+        client = _build_client(api_key=api_key, base_url=base_url)
         response = client.chat.completions.create(
-            model=MODEL,
+            model=model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},

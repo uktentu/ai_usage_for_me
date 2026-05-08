@@ -200,7 +200,7 @@ const PROVIDERS = {
   },
   openai: {
     name: "OpenAI",
-    defaultBaseUrl: "https://api.openai.com",
+    defaultBaseUrl: "https://api.openai.com/v1",
     defaultModel: "gpt-4o-mini",
     keyPlaceholder: "sk-…",
     models: [
@@ -326,7 +326,7 @@ async function generatePlan(topic) {
   const prov    = activeProvider();
   const baseUrl = SESSION.baseUrl || prov.defaultBaseUrl;
   const model   = activeModel();
-  const url     = baseUrl.replace(/\/$/, "") + "/v1/chat/completions";
+  const url     = buildChatCompletionsUrl(baseUrl);
 
   const systemPrompt = `You are an expert educator and curriculum designer.
 Your goal is to create a Pareto-optimal (80/20) learning plan:
@@ -355,6 +355,14 @@ Return a JSON object with exactly these keys:
   "common_pitfalls": [string] (top 5 mistakes learners make),
   "success_metrics": [string] (how to know you have mastered it),
   "next_steps": [string] (what to learn after mastery)
+}
+
+function buildChatCompletionsUrl(baseUrl) {
+  const normalized = (baseUrl || "").trim().replace(/\/+$/, "");
+  if (normalized.endsWith("/chat/completions")) {
+    return normalized;
+  }
+  return `${normalized}/chat/completions`;
 }
 
 Make the plan practical, specific, and actionable.

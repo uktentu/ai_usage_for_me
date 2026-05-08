@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Usage &amp; Learning Planner</title>
+  <title>AIBoost — AI Usage & Learning Planner</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -18,12 +18,19 @@
         <button class="nav-btn active" data-tab="planner">📚 Learning Planner</button>
         <button class="nav-btn" data-tab="llm-guide">🤖 LLM Guide</button>
         <button class="nav-btn" data-tab="prompts">✨ Prompt Library</button>
+        <button class="nav-btn" data-tab="settings">⚙️ API Key</button>
       </nav>
     </div>
   </header>
 
   <!-- ===== MAIN CONTENT ===== -->
   <main class="main-content">
+
+    <!-- ─── API KEY BANNER (shown when no key is set) ─── -->
+    <div id="api-key-banner" class="api-key-banner hidden">
+      <span>⚡ <strong>Add your OpenAI API key</strong> to get AI-generated learning plans — or use Demo Mode for free.</span>
+      <button class="btn-link" id="banner-settings-btn">Set API Key →</button>
+    </div>
 
     <!-- ─── TAB: LEARNING PLANNER ─── -->
     <section id="tab-planner" class="tab-panel active">
@@ -48,7 +55,7 @@
               <span class="btn-icon">⚡</span> Generate Plan
             </button>
           </div>
-          <p class="hint">✅ Works without an API key (demo mode) — add your OpenAI key in <code>.env</code> for AI-generated plans.</p>
+          <p class="hint" id="mode-hint">✅ <strong>Demo mode</strong> — add your OpenAI API key in ⚙️ API Key tab for AI-generated plans.</p>
         </form>
       </div>
 
@@ -71,25 +78,94 @@
         <h1>LLM Usage Guide</h1>
         <p class="hero-sub">Master every major AI model — know their strengths, ideal prompting patterns, and what to avoid.</p>
       </div>
-      <div id="llm-grid" class="llm-grid">
-        <div class="loading-state">
-          <div class="spinner"></div>
-          <p>Loading…</p>
-        </div>
-      </div>
+      <div id="llm-grid" class="llm-grid"></div>
     </section>
 
     <!-- ─── TAB: PROMPT LIBRARY ─── -->
     <section id="tab-prompts" class="tab-panel hidden">
       <div class="hero">
         <h1>Prompt Library</h1>
-        <p class="hero-sub">Ready-to-use prompt templates. Click to copy, then paste into any AI chat.</p>
+        <p class="hero-sub">Ready-to-use prompt templates. Click any card to copy it to your clipboard.</p>
       </div>
-      <div id="prompts-grid" class="prompts-grid">
-        <div class="loading-state">
-          <div class="spinner"></div>
-          <p>Loading…</p>
+      <div id="prompts-grid" class="prompts-grid"></div>
+    </section>
+
+    <!-- ─── TAB: SETTINGS ─── -->
+    <section id="tab-settings" class="tab-panel hidden">
+      <div class="hero">
+        <h1>API Key &amp; Model Settings</h1>
+        <p class="hero-sub">Your API key is stored only in this browser session and is never committed to any code.</p>
+      </div>
+
+      <div class="card settings-card">
+
+        <!-- ── Provider ── -->
+        <h2 class="settings-heading">🤖 AI Provider</h2>
+        <p class="settings-desc">Choose which AI service to use for generating learning plans.</p>
+        <div class="provider-selector" id="provider-selector" style="margin-top:0.75rem;">
+          <button class="provider-btn active" data-provider="gemini">✨ Google Gemini <span class="provider-badge">Free tier available</span></button>
+          <button class="provider-btn" data-provider="openai">🤖 OpenAI</button>
         </div>
+
+        <hr class="divider" />
+
+        <!-- ── API Key ── -->
+        <h2 class="settings-heading">🔑 API Key</h2>
+        <p class="settings-desc" id="key-desc-gemini">
+          Get a free Gemini key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.
+          The free tier includes generous daily limits.
+        </p>
+        <p class="settings-desc hidden" id="key-desc-openai">
+          Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>.
+          <code>gpt-4o-mini</code> costs roughly $0.0001 per plan.
+        </p>
+        <p class="settings-desc" style="margin-top:0.4rem;">
+          🔒 Stored in <strong>session storage</strong> only — automatically cleared when you close this tab.
+        </p>
+        <div class="input-row" style="margin-top:0.9rem;">
+          <input
+            id="api-key-input"
+            type="password"
+            class="topic-input"
+            placeholder="Paste your API key…"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="save-key-btn" class="btn-primary">Save Key</button>
+          <button id="clear-key-btn" class="btn-secondary">Clear</button>
+        </div>
+        <div id="key-status" class="key-status hidden"></div>
+
+        <hr class="divider" />
+
+        <!-- ── Model ── -->
+        <h2 class="settings-heading">🎯 Model</h2>
+        <p class="settings-desc" id="model-desc">Select the model to use for generating learning plans.</p>
+        <div class="model-selector-row" style="margin-top:0.75rem;">
+          <select id="model-select" class="model-select"></select>
+          <button id="save-model-btn" class="btn-secondary">Save</button>
+        </div>
+        <div id="model-rate-limits" class="rate-limits-info hidden"></div>
+
+        <hr class="divider" />
+
+        <!-- ── Custom Base URL (advanced) ── -->
+        <details class="advanced-details">
+          <summary class="settings-heading" style="cursor:pointer; list-style:none; display:flex; align-items:center; gap:0.4rem;">
+            🔗 Custom Base URL <span style="font-size:0.8rem; font-weight:400; color:var(--text-muted)">(advanced — for Ollama, LM Studio, or other providers)</span>
+          </summary>
+          <p class="settings-desc" style="margin-top:0.5rem;">Leave blank to use the default endpoint for the selected provider.</p>
+          <div class="input-row" style="margin-top:0.8rem;">
+            <input
+              id="base-url-input"
+              type="text"
+              class="topic-input"
+              placeholder="e.g. http://localhost:11434/v1"
+            />
+            <button id="save-base-url-btn" class="btn-secondary">Save</button>
+          </div>
+        </details>
+
       </div>
     </section>
 
@@ -97,11 +173,11 @@
 
   <!-- ===== FOOTER ===== -->
   <footer class="site-footer">
-    <p>🧠 AIBoost — Learn smarter with the Pareto principle &amp; the right AI tools.</p>
+    <p>🧠 AIBoost — Learn smarter with the Pareto principle &amp; the right AI tools &nbsp;·&nbsp; <a href="https://github.com/uktentu/ai_usage_for_me" target="_blank" rel="noopener">GitHub</a></p>
   </footer>
 
   <!-- ===== TOAST ===== -->
-  <div id="toast" class="toast hidden">Copied!</div>
+  <div id="toast" class="toast hidden"></div>
 
   <script src="app.js"></script>
 </body>
